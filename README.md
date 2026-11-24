@@ -26,7 +26,7 @@ Sorting dry beans by type is usually done by hand, which is slow and inconsisten
 ## Dataset
 
 - **Source:** [UCI Dry Bean Dataset](https://archive.ics.uci.edu/dataset/602/dry+bean+dataset) (Koklu and Ozkan, 2020)
-- **Samples:** 13,611 beans (68 duplicate rows were kept)
+- **Samples:** 13,611 rows, 13,543 unique beans after removing 68 duplicate rows
 - **Features:** 16 numeric shape features, for example Area, Perimeter, MajorAxisLength, MinorAxisLength, AspectRatio, Eccentricity, ConvexArea, EquivDiameter, Extent, Solidity, roundness, Compactness and ShapeFactor1 to 4
 - **Target:** 7 classes: Barbunya, Bombay, Cali, Dermason, Horoz, Seker, Sira
 - **Missing values:** none
@@ -36,14 +36,15 @@ Sorting dry beans by type is usually done by hand, which is slow and inconsisten
 ## Project workflow
 
 1. **Exploratory data analysis:** class distribution, correlation analysis (15 of 120 feature pairs have a correlation above 0.95, for example Area and ConvexArea) and class separation per feature
-2. **Preprocessing:** stratified 70/15/15 train/validation/test split and standardization fitted on the training set only, to avoid data leakage
+2. **Preprocessing:** duplicate rows are removed before the split, so the same bean cannot appear in both the training set and the test set. Then a stratified 70/15/15 train/validation/test split and standardization fitted on the training set only, to avoid data leakage
 3. **Baseline model:** a small 16-8 network used as the reference
 4. **Topology comparison:** five network sizes trained and compared
-5. **Regularization:** dropout, early stopping and model checkpointing
+5. **Regularization:** dropout, early stopping and model checkpointing (both watch the validation loss, and the best weights are reloaded from the checkpoint file after training)
 6. **Model selection:** 5-fold stratified cross validation and grid search with SciKeras and scikit-learn
 7. **Final evaluation:** one evaluation on the held-out test set
 8. **Diagnostics:** learning curves, learning-curve vs. training-size study and error analysis
 9. **Saving:** the final model is saved in the Keras format
+10. **Baseline comparison:** Logistic Regression and Random Forest trained on the same train/test split as the MLP
 
 A fixed random seed (7) is used everywhere for reproducibility.
 
@@ -55,50 +56,60 @@ A fixed random seed (7) is used everywhere for reproducibility.
 | Hidden layers | Dense layers with ReLU (best CV setting: 32-16) |
 | Output | Dense(7) with softmax |
 | Loss | Sparse categorical cross entropy |
-| Optimizer | RMSprop (best from grid search) |
+| Optimizer | Adam (best from grid search) |
 | Batch size | 64 |
-| Regularization | Early stopping and checkpointing; dropout was tested |
+| Regularization | Early stopping and checkpointing, both on the validation loss; dropout was tested |
 
 ## Experiments
 
-**Topologies (validation accuracy):** all five topologies reached about 92% (between 91.8% and 92.5%). Bigger networks fit the training set better but did not improve validation accuracy, so a small network is enough for this data.
+**Topologies (validation accuracy):** all five topologies gave a similar validation accuracy (between 92.9% and 94.1% at the best epoch). Bigger networks fit the training set better but did not improve validation accuracy, so a small network is enough for this data.
 
 **5-fold cross validation:**
 
 | Network | CV accuracy |
 |---|---|
-| 16-8 | 92.37% |
-| 32-16 | 92.53% |
-| 64-32 with dropout | 92.76% |
+| 16-8 | 92.32% |
+| 32-16 | 92.76% |
+| 64-32 with dropout | 92.80% |
 
-**Grid search:** the best setting was RMSprop, no dropout, batch size 64 (about 92.6% CV accuracy).
+**Grid search:** the best setting was Adam, no dropout, batch size 64 (about 92.8% CV accuracy).
 
-**Early stopping:** training stopped after 65 epochs and the best epoch was 50.
+**Comparison with classical models (same split, same seed):**
 
-**Training size:** validation accuracy was about 91.3% with only 10% of the training data and stayed around 92% after that, so adding more data of the same kind helps very little.
+| Model | Test accuracy | Macro F1 |
+|---|---|---|
+| MLP 32-16 (final model) | 93.06% | 0.943 |
+| Logistic Regression | 92.86% | 0.941 |
+| Random Forest | 92.62% | 0.938 |
+
+The MLP is at least as good as the classical models, but the gap is small (4 to 9 beans out of 2,032) and within the normal variation of a single split, so it is not claimed to be clearly better.
+
+**Early stopping:** training stopped after 114 epochs and the best epoch was 99.
+
+**Training size:** each size was trained with 3 different seeds and the mean and spread were measured. Validation accuracy was about 92.1% with only 10% of the training data and about 93.5% with all of it, with a spread of at most 0.5 points between seeds, so adding more data of the same kind helps very little.
 
 ## Results
 
 | Metric | Value |
 |---|---|
-| Test accuracy | **93.49%** |
-| Macro F1-score | **0.946** |
-| Errors on the test set | 133 of 2,042 (6.5%) |
+| Test accuracy | **93.06%** |
+| Macro F1-score | **0.943** |
+| Errors on the test set | 141 of 2,032 (6.9%) |
 
 - Bombay is classified perfectly.
-- Sira is the hardest class (F1 0.887).
-- The gap between training and validation accuracy is small (about 1.3 points), so overfitting is mild.
+- Sira is the hardest class (F1 0.879).
+- The gap between training and validation accuracy at the best epoch is only 0.08 points (93.39% vs 93.31%), so there is no real overfitting.
 
 ## Error analysis
 
-- Most mistakes are between **Dermason** and **Sira**, two beans with very similar shapes (39 Dermason predicted as Sira, 21 Sira predicted as Dermason).
-- The model is less confident when it is wrong: average confidence is about 0.70 for wrong predictions and 0.95 for correct ones. A confidence threshold could flag uncertain beans for manual checking.
+- Most mistakes are between **Dermason** and **Sira**, two beans with very similar shapes (45 Dermason predicted as Sira, 17 Sira predicted as Dermason).
+- The model is less confident when it is wrong: average confidence is about 0.71 for wrong predictions and 0.95 for correct ones. A confidence threshold could flag uncertain beans for manual checking.
 
 ## Limitations and future work
 
 - Only shape features are used. Color and texture features could separate Dermason and Sira better.
 - The dataset is imbalanced. Class weights or resampling could be tested.
-- Other model families (gradient boosting, for example) could be compared with the MLP.
+- Only two classical baselines were tried with default-like settings. Tuned gradient boosting (for example XGBoost) was not compared.
 - Cross validation and grid search used a small number of epochs to keep the run time reasonable.
 - Results can differ slightly between machines even with a fixed seed.
 
