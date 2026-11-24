@@ -126,8 +126,8 @@ The MLP is at least as good as the classical models, but the gap is small (4 to 
 ## How to run
 
 ```bash
-git clone <your-repository-url>
-cd <repository-folder>
+git clone https://github.com/shrouk01033/DryBean.git
+cd DryBean
 pip install -r requirements.txt
 jupyter notebook dry-bean-nn-project.ipynb
 ```
