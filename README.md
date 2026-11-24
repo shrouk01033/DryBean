@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue) ![Keras](https://img.shields.io/badge/Keras-TensorFlow-red) ![Task](https://img.shields.io/badge/Task-Multi--class%20classification-green)
 
-A multi-class neural network (MLP) built with Keras that predicts the type of a dry bean from 16 shape measurements taken from images. The project was built for the Neural Networks course and follows the workflow of the practical labs (Weeks 2 to 7): Keras Sequential models, scikit-learn integration, cross validation, grid search, checkpoints, dropout and early stopping.
+A multi-class neural network (MLP) built with Keras that predicts the type of a dry bean from 16 shape measurements taken from images. The project covers the full workflow: Keras Sequential models, scikit-learn integration, cross validation, grid search, checkpoints, dropout and early stopping.
 
 ## Table of contents
 
@@ -45,7 +45,7 @@ Sorting dry beans by type is usually done by hand, which is slow and inconsisten
 8. **Diagnostics:** learning curves, learning-curve vs. training-size study and error analysis
 9. **Saving:** the final model is saved in the Keras format
 
-A fixed random seed (7) is used everywhere, as in the labs.
+A fixed random seed (7) is used everywhere for reproducibility.
 
 ## Model
 
